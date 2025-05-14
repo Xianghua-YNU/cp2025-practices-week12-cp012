@@ -15,9 +15,9 @@ def breit_wigner(E, Er, Gamma, fr):
     返回:
         float or numpy.ndarray: 共振截面(mb)
     """
-    # TODO: 在此实现Breit-Wigner公式 (约1行代码)
-    # [STUDENT_CODE_HERE]
-    raise NotImplementedError("请在 {} 中实现此函数".format(__file__))
+    # 实现Breit-Wigner公式
+    # 公式为：f(E) = fr / [(E - Er)^2 + (Gamma/2)^2]
+    return fr / ((E - Er)**2 + (Gamma/2)**2)
 
 def fit_without_errors(energy, cross_section):
     """
@@ -33,13 +33,16 @@ def fit_without_errors(energy, cross_section):
             - pcov (2D array): 参数的协方差矩阵
     """
     # 初始猜测值
-    Er_guess = 75.0
-    Gamma_guess = 50.0
-    fr_guess = 10000.0
+    Er_guess = 75.0      # 共振能量的初始猜测
+    Gamma_guess = 50.0   # 共振宽度的初始猜测
+    fr_guess = 10000.0   # 共振强度的初始猜测
     
-    # TODO: 使用curve_fit进行拟合 (约1行代码)
-    # [STUDENT_CODE_HERE]
-    raise NotImplementedError("请在 {} 中实现此函数".format(__file__))
+    # 使用curve_fit进行拟合，不考虑误差
+    # curve_fit的第一个参数是模型函数，第二个和第三个参数分别是自变量和因变量数据
+    # p0参数指定初始猜测值
+    popt, pcov = curve_fit(breit_wigner, energy, cross_section, p0=[Er_guess, Gamma_guess, fr_guess])
+    
+    return popt, pcov
 
 def fit_with_errors(energy, cross_section, errors):
     """
@@ -56,13 +59,16 @@ def fit_with_errors(energy, cross_section, errors):
             - pcov (2D array): 参数的协方差矩阵
     """
     # 初始猜测值
-    Er_guess = 75.0
-    Gamma_guess = 50.0
-    fr_guess = 10000.0
+    Er_guess = 75.0      # 共振能量的初始猜测
+    Gamma_guess = 50.0   # 共振宽度的初始猜测
+    fr_guess = 10000.0   # 共振强度的初始猜测
     
-    # TODO: 使用curve_fit进行拟合，考虑误差 (约1行代码)
-    # [STUDENT_CODE_HERE]
-    raise NotImplementedError("请在 {} 中实现此函数".format(__file__))
+    # 使用curve_fit进行拟合，考虑误差
+    # sigma参数传入误差数据，absolute_sigma=True表示使用绝对误差进行拟合
+    popt, pcov = curve_fit(breit_wigner, energy, cross_section, p0=[Er_guess, Gamma_guess, fr_guess],
+                          sigma=errors, absolute_sigma=True)
+    
+    return popt, pcov
 
 def plot_fit_results(energy, cross_section, errors, popt, pcov, title):
     """
@@ -79,65 +85,94 @@ def plot_fit_results(energy, cross_section, errors, popt, pcov, title):
     plt.figure(figsize=(10, 6))
     
     # 绘制数据点
+    # errorbar函数用于绘制带误差线的数据点
+    # fmt参数指定数据点的样式，yerr参数指定误差线的数据
     plt.errorbar(energy, cross_section, yerr=errors, fmt='o', 
                 color='blue', markersize=5, ecolor='gray',
                 elinewidth=1, capsize=2, label='Experimental Data')
     
     # 绘制拟合曲线
+    # linspace函数生成一组均匀分布的能量值，用于绘制平滑的拟合曲线
     E_fit = np.linspace(min(energy), max(energy), 500)
+    # 使用拟合参数计算对应的能量值下的截面
     cross_section_fit = breit_wigner(E_fit, *popt)
+    # plot函数绘制拟合曲线
     plt.plot(E_fit, cross_section_fit, '-', color='red', 
              linewidth=2, label='Fitted Curve')
     
     # 添加参数信息
+    # 提取拟合参数
     Er, Gamma, fr = popt
+    # 计算参数的标准差（从协方差矩阵的对角线元素开平方得到）
     Er_std = np.sqrt(pcov[0, 0])
     Gamma_std = np.sqrt(pcov[1, 1])
     fr_std = np.sqrt(pcov[2, 2])
     
+    # 在图表上添加拟合参数及其95%置信区间的信息
+    # text函数在指定位置添加文本，transform参数指定坐标系，verticalalignment参数指定垂直对齐方式
+    # bbox参数设置文本框的样式
     plt.text(0.05, 0.95, 
-             f'$E_r$ = {Er:.1f} ± {1.96*Er_std:.1f} MeV (95% CI)\n'
+             f'$E_r$ = {Er:.1f} ± {1.96*Er_std:.1f} MeV (95% CI)\n'  # 1.96是正态分布的95%置信区间的系数
              f'$\Gamma$ = {Gamma:.1f} ± {1.96*Gamma_std:.1f} MeV (95% CI)\n'
              f'$f_r$ = {fr:.0f} ± {1.96*fr_std:.0f} (95% CI)',
              transform=plt.gca().transAxes, 
              verticalalignment='top',
              bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
     
+    # 设置坐标轴标签和标题
     plt.xlabel('Energy (MeV)')
     plt.ylabel('Cross Section (mb)')
     plt.title(title)
+    
+    # 添加图例和网格线
     plt.legend()
     plt.grid(True, linestyle='--', alpha=0.7)
-    plt.tight_layout()
+    plt.tight_layout()  # 自动调整子图参数，使图表布局更合理
     
     return plt.gcf()
 
 def main():
     # 实验数据
-    energy = np.array([0, 25, 50, 75, 100, 125, 150, 175, 200])
-    cross_section = np.array([10.6, 16.0, 45.0, 83.5, 52.8, 19.9, 10.8, 8.25, 4.7])
-    errors = np.array([9.34, 17.9, 41.5, 85.5, 51.5, 21.5, 10.8, 6.29, 4.14])
+    energy = np.array([0, 25, 50, 75, 100, 125, 150, 175, 200])  # 能量数据
+    cross_section = np.array([10.6, 16.0, 45.0, 83.5, 52.8, 19.9, 10.8, 8.25, 4.7])  # 截面数据
+    errors = np.array([9.34, 17.9, 41.5, 85.5, 51.5, 21.5, 10.8, 6.29, 4.14])  # 误差数据
     
     # 任务1：不考虑误差的拟合
     popt1, pcov1 = fit_without_errors(energy, cross_section)
     fig1 = plot_fit_results(energy, cross_section, errors, popt1, pcov1,
-                          'Breit-Wigner Fit (Without Errors)')
+                          'Breit-Wigner Fit (Without Errors)')  # 绘制不考虑误差的拟合结果
     
     # 任务2：考虑误差的拟合
     popt2, pcov2 = fit_with_errors(energy, cross_section, errors)
     fig2 = plot_fit_results(energy, cross_section, errors, popt2, pcov2,
-                          'Breit-Wigner Fit (With Errors)')
+                          'Breit-Wigner Fit (With Errors)')  # 绘制考虑误差的拟合结果
     
-    plt.show()
+    plt.show()  # 显示图表
     
     # 任务3：结果比较
     print("\n拟合结果比较:")
-    print(f"不考虑误差: Er={popt1[0]:.1f}±{1.96*np.sqrt(pcov1[0,0]):.1f} MeV (95% CI), "
-          f"Γ={popt1[1]:.1f}±{1.96*np.sqrt(pcov1[1,1]):.1f} MeV (95% CI), "
-          f"fr={popt1[2]:.0f}±{1.96*np.sqrt(pcov1[2,2]):.0f} (95% CI)")
-    print(f"考虑误差:   Er={popt2[0]:.1f}±{1.96*np.sqrt(pcov2[0,0]):.1f} MeV (95% CI), "
-          f"Γ={popt2[1]:.1f}±{1.96*np.sqrt(pcov2[1,1]):.1f} MeV (95% CI), "
-          f"fr={popt2[2]:.0f}±{1.96*np.sqrt(pcov2[2,2]):.0f} (95% CI)")
+    # 计算参数的95%置信区间
+    Er_noe = popt1[0]
+    Er_noe_std = np.sqrt(pcov1[0, 0])
+    Gamma_noe = popt1[1]
+    Gamma_noe_std = np.sqrt(pcov1[1, 1])
+    fr_noe = popt1[2]
+    fr_noe_std = np.sqrt(pcov1[2, 2])
+    
+    Er_e = popt2[0]
+    Er_e_std = np.sqrt(pcov2[0, 0])
+    Gamma_e = popt2[1]
+    Gamma_e_std = np.sqrt(pcov2[1, 1])
+    fr_e = popt2[2]
+    fr_e_std = np.sqrt(pcov2[2, 2])
+    
+    # 打印拟合结果
+    print(f"不考虑误差: Er={Er_noe:.1f}±{1.96*Er_noe_std:.1f} MeV (95% CI), "
+          f"Γ={Gamma_noe:.1f}±{1.96*Gamma_noe_std:.1f} MeV (95% CI), "
+          f"fr={fr_noe:.0f}±{1.96*fr_noe_std:.0f} (95% CI)")
+    print(f"考虑误差:   Er={Er_e:.1f}±{1.96*Er_e_std:.1f} MeV (95% CI), "
+          f"Γ={Gamma_e:.1f}±{1.96*Gamma_e_std:.1f} MeV (95% CI), "
+          f"fr={fr_e:.0f}±{1.96*fr_e_std:.0f} (95% CI)")
 
 if __name__ == "__main__":
     main()
