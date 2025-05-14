@@ -21,14 +21,14 @@ def lagrange_interpolation(x, x_data, y_data):
         插值结果
     """
     n = len(x_data)
-    result = np.zeros_like(x)
+    result = 0.0
 
     for i in range(n):
-        term = np.ones_like(x)
+        term = y_data[i]
         for j in range(n):
             if i != j:
                 term *= (x - x_data[j]) / (x_data[i] - x_data[j])
-        result += y_data[i] * term
+        result += term
 
     return result
 
